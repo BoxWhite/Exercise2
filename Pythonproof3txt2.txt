@@ -1,0 +1,338 @@
+
+#グラフを作る前に問題を一つ解く
+import networkx as nx
+import pylab
+import matplotlib.pyplot as plt
+#点の座標を取得
+
+class Plot():
+
+    def __init__(self):
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
+
+        self.X = []
+        self.Y = []
+        self.ax.set_xlim(0,100)
+        self.ax.set_ylim(0,100)
+        self.ax.grid(which = "both")
+        cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+        self.number = 0
+       
+        plt.show()
+
+    def onclick(self,event):
+        print ('event.button=%d,  event.x=%d, event.y=%d, event.xdata=%f, \
+        event.ydata=%f'%(event.button, event.x, event.y, event.xdata, event.ydata))
+        self.X.append(event.xdata)
+        self.Y.append(event.ydata)
+        print(self.X)
+        print(self.Y)
+       
+        self.ax.plot(self.X,self.Y,"bo")
+        self.number += 1
+        plt.show()
+    
+    def getPoints(self):
+        a = self.number
+
+    def makeLine(self,numberset):
+        a = self.number
+        X_set = []
+        Y_set = []
+        b = len(numberset)
+
+        for i in range(b):
+            x = self.X[numberset[i]-1]
+            y = self.Y[numberset[i]-1]
+
+            X_set.append(x)
+            Y_set.append(y)
+
+        c = np.polyfit(X_set,Y_set,1)
+        
+        return c
+
+    def checkSameSide(self,n1,n2,numberset):
+        c = self.makeLine(numberset)
+
+        x1 = self.X[n1-1]
+        y1 = self.Y[n1-1]
+
+        x2 = self.X[n2-1]
+        y2 = self.Y[n2-1]
+
+        c1 = c[0]
+        c2 = c[1]
+
+        d = (y1-c[0]*x1-c[1])*(y2-c[0]*x2 - c[1])
+        print(d)
+        if d > 0:
+            return True
+        elif d < 0:
+            return False
+        else:
+            return None
+
+    def getPoint(self,num):
+        x1 = self.X[num-1]
+        y1 = self.Y[num-1]
+
+        return [x1,y1]
+    #num2がnum1とnum3の間にあるか調べる
+    def checkBetween(self,num1,num2,num3):
+        x1 = self.X[num1-1]
+        y1 = self.Y[num1-1]
+
+        x2 = self.X[num2-1]
+        y2 = self.Y[num2-1]
+
+        x3 = self.X[num3-1]
+        y3 = self.Y[num3-1]
+
+        d12 = (x1-x2)**2+(y1-y2)**2
+        d13 = (x1-x3)**2 + (y1-y3)**2
+
+        if d12 < d13:
+            return True
+        else:
+            return False
+
+
+class Graph():
+    def __init__(self):
+        self.G = nx.DiGraph()
+        self.factstrings = []
+        self.H = nx.DiGraph()
+        self.managementnumber = 0
+
+    
+    def appendFact(self,factstring1,factstring2,theoremstring):
+        self.G.add_node(factstring1)
+        self.G.add_node(factstring2)
+        #前提が既知かどうか
+        t1 = False
+        for string0 in self.factstrings:
+            if factstring2 == string0:
+                t1 = True
+
+        if not t1:
+            self.G.add_edge(factstring1,factstring2,t = theoremstring)
+            #self.G.edge[factstring1][factstring2]['t'] = theoremstring
+
+        self.factstrings.append(factstring1)
+        
+        
+    def displayGraph(self):
+        nx.draw_networkx(self.G)
+        plt.show()
+    def removing(self,factstring1):
+        self.H.add_node(factstring1)
+        
+        p = list(self.G.predecessors(factstring1))
+        
+        if len(p) != 0:
+            b0 = len(p)
+            
+            for k in range(b0):
+                z = p[k]
+                
+                self.H.add_node(z)
+                self.H.add_edge(z,factstring1)
+
+            for k in range(b0):
+                z1 = p[k]
+                #再帰的
+                self.removing(z1)
+
+    def displayProof(self):
+        nx.draw_networkx(self.H)
+        plt.show()
+        
+class Human():
+    #点の集合をもつ
+    def __init__(self):
+        self.pointset = []
+
+    def appendPoint(self,point1):
+        self.pointset.append(point1)
+
+    def getPoint(self,num1):
+        x = self.pointset[num1-1]
+        return x
+
+#不要な可能性
+class Point():
+    def __init__(self,number):
+        self.number = number
+        self.info = []
+
+    def appendInfo(self,info1):
+        self.info.append(info1)
+
+    def getInfo(self,num):
+        x = self.info[num-1]
+        return x
+    #点が文字列を含んでいるかどうか
+    def checkInfo(self,num,string0):
+        for k in range(len(self.info)):
+            string = self.info[k]
+            if string0 == string:
+                return True
+        return False
+
+
+#１．命題と点集合を保管。
+#２．仮定を入力させる。
+#３．推移律で新しい命題を作る。
+#
+class Recorder():
+    def __init__(self):
+        self.pointset = []
+        self.propositionset = []
+        self.managementNumber1 = 0
+        self.managementNumber2 = 0
+        
+
+    def appendNewPoint(self,num):
+        for i in range(num):
+            self.pointset.append([])
+
+    #点の情報を追加
+    def appendPointInfo(self,num,string):
+        x = self.pointset[num-1]
+        x.append(string)
+        self.pointset[num-1] = x
+    #点の情報を取り出す
+    def getPointInfo(self,num1,num2):
+        x = self.pointset[num1-1,num2-1]
+    #num1番の点がstring0の情報を持つか？
+    def checkPointInfo(self,num1,string0):
+        x = self.pointset[num1-1,:]
+        for i in range(len(x)):
+            p = x[i]
+            if p == string0:
+                return True
+        return False
+
+    def printPointInfo(self):
+        print(self.pointset)
+    #直線上にある点をすべて返す。
+    def getSameLine(self,num1):
+        d = []
+        for i in range(len(self.pointset)):
+            p = self.pointset[i]
+            for j in range(len(p)):
+                q = p[j]
+                if q == 'L:' + str(num1):
+                    k = i+1
+                    d.append(k)
+
+        return d
+    #ある点を通る直線をすべて返す
+    def getLinesThroughPoint(self,pointnumber):
+        d = []
+        e = self.pointset[pointnumber-1]
+        for i in range(len(e)):
+            k = e[i].split(':')[0]
+            if k == 'L':
+                f = e[i].split(':')[1]
+                d.append(f)
+
+        return d
+
+
+        
+    
+    def hearingSameSegment(self):
+        bool0 = True
+        print('長さの等しい線分を入力')
+        while bool0:
+            word = input()
+            if word == 'end':
+                bool0 = False
+            else:
+                a = word.split(';')
+                d = a[0].split(',')
+                e = int(d[0])
+                f = int(d[1])
+                g = a[1].split(',')
+                h = int(g[0])
+                i = int(g[1])
+
+                self.appendPointInfo(e,'S:' + str(self.managementNumber1))
+                self.appendPointInfo(f,'S:' + str(self.managementNumber1))
+                self.managementNumber1 += 1
+
+                self.appendPointInfo(h,'S:' + str(self.managementNumber1))
+                self.appendPointInfo(i,'S:' + str(self.managementNumber1))
+                self.managementNumber1 += 1
+
+    def hearingOnLine(self):
+        bool0 = True
+        print('__同一直線上の点を入力__')
+        while bool0 == True:
+            word = input()
+            if word =='end':
+                bool0 = False
+            else:
+                a = word.split(',')
+                for i in range(len(a)):
+                    d = int(a[i])
+                    self.appendPointInfo(d,'L:' + str(self.managementNumber1))
+                self.managementNumber1 += 1
+
+    def searchLineFromTwoPoints(self,p1,p2):
+        d1 = self.getLinesThroughPoint(p1)
+        d2 = self.getLinesThroughPoint(p2)
+        for i in range(len(d1)):
+            for j in range(len(d2)):
+                if d1[i] == d2[j]:
+                    return d1[i]
+
+        return None
+
+
+    def hearingParallelLines(self):
+         bool0 = True
+         print('__平行線を入力__')
+         while bool0 == True:
+             word = input()
+             if word == 'end':
+                 bool0 = False
+             else:
+                 a = word.split(';')
+                 p1 = int(a[0].split(',')[0])
+                 p2 = int(a[0].split(',')[1])
+                 p3 = int(a[1].split(',')[0])
+                 p4 = int(a[1].split(',')[1])
+                 l1 = self.searchLineFromTwoPoints(p1,p2)
+                 l2 = self.searchLineFromTwoPoints(p3,p4)
+                 
+                 d1 = self.getSameLine(l1)
+                 d2 = self.getSameLine(l2)
+                 
+                 for i in range(len(d1)):
+                     self.appendPointInfo(d1[i],'P:' + str(self.managementNumber1))
+                 self.managementNumber1 += 1
+                 for i in range(len(d2)):
+                     self.appendPointInfo(d2[i],'P:' + str(self.managementNumber1))
+                 self.managementNumber1 += 1
+             
+
+
+
+
+
+
+class Solver():
+    pass
+
+if __name__ == "__main__":
+    recorder = Recorder()
+    recorder.appendNewPoint(13)
+
+    recorder.hearingOnLine()
+    recorder.hearingSameSegment()
+    recorder.hearingParallelLines()
+    recorder.printPointInfo()
